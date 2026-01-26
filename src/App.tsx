@@ -1,17 +1,19 @@
-import React, { useState } from 'react'
+import React from 'react'
+import Converter from './components/Converter'
 
 export default function App() {
-  const [count, setCount] = useState(0)
   return (
-    <div className="p-10 font-sans">
-      <h1 className="text-3xl font-bold mb-4">Soku-p</h1>
-      <p className="mb-4 text-gray-700">Client-side image conversion with WASM.</p>
-      <button
-        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-        onClick={() => setCount(count + 1)}
-      >
-        Count is {count}
-      </button>
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 font-sans">
+      <div className="mb-8 text-center">
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">Soku-p</h1>
+        <p className="text-gray-600">Client-side image conversion powered by WebAssembly</p>
+      </div>
+
+      <Converter />
+
+      <footer className="mt-12 text-center text-sm text-gray-400">
+        <p>Built with Vite, React, Hono & WASM</p>
+      </footer>
     </div>
   )
 }
