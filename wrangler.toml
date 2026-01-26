@@ -1,0 +1,10 @@
+name = "soku-p"
+main = "dist/index.js"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[site]
+bucket = "./dist/static"
+
+[vars]
+ENVIRONMENT = "production"
