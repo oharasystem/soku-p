@@ -1,5 +1,8 @@
-import React from 'react'
-import Converter from './components/Converter'
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
+import Home from './pages/Home';
+import Privacy from './pages/Privacy';
 
 interface AppProps {
   initialSource?: string;
@@ -8,17 +11,13 @@ interface AppProps {
 
 export default function App({ initialSource, initialTarget }: AppProps) {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 font-sans">
-      <div className="mb-8 text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">Soku-p</h1>
-        <p className="text-gray-600">Client-side image conversion powered by WebAssembly</p>
-      </div>
-
-      <Converter initialSource={initialSource} initialTarget={initialTarget} />
-
-      <footer className="mt-12 text-center text-sm text-gray-400">
-        <p>Built with Vite, React, Hono & WASM</p>
-      </footer>
-    </div>
-  )
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Home initialSource={initialSource} initialTarget={initialTarget} />} />
+        <Route path="/convert/:slug" element={<Home initialSource={initialSource} initialTarget={initialTarget} />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="*" element={<Home />} />
+      </Routes>
+    </Layout>
+  );
 }
