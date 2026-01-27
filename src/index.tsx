@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { serveStatic } from 'hono/cloudflare-workers'
 import { renderToReadableStream } from 'react-dom/server'
+import { StaticRouter } from 'react-router-dom/server'
 import App from './App'
 import { isValidFormat } from './lib/constants'
 import { generateMetadata, SEOData } from './lib/seo'
@@ -47,7 +48,9 @@ async function renderHtml(c: any, initialData: { source?: string, target?: strin
       </head>
       <body>
         <div id="root">
-          <App initialSource={initialData.source} initialTarget={initialData.target} />
+          <StaticRouter location={c.req.path}>
+            <App initialSource={initialData.source} initialTarget={initialData.target} />
+          </StaticRouter>
         </div>
       </body>
     </html>
@@ -63,18 +66,16 @@ async function renderHtml(c: any, initialData: { source?: string, target?: strin
 // Dynamic Route for SEO
 app.get('/convert/:slug', async (c) => {
   const slug = c.req.param('slug')
-  // split on LAST occurrence of '-to-' or just first?
-  // format is simple: 'heic-to-jpg'. 'source' shouldn't contain '-to-' usually.
   const parts = slug.split('-to-')
 
-  // Validation: must have exactly 2 parts
   if (parts.length !== 2) {
+    // If invalid slug format, redirect to home or let router handle it?
+    // Current logic redirects.
     return c.redirect('/')
   }
 
   const [source, target] = parts
 
-  // Validation: Check supported formats
   if (!isValidFormat(source, target)) {
     return c.redirect('/')
   }
@@ -86,11 +87,17 @@ app.get('/convert/:slug', async (c) => {
 
 // Default/Catch-all Route
 app.get('*', async (c) => {
-  // Default SEO
+  // Check if it's a privacy page or others for SEO metadata
+  // For now simple default SEO.
   const seo: SEOData = {
-    title: 'Soku-p',
-    description: 'Client-side image conversion powered by WebAssembly. Private, fast, and secure.',
+    title: 'Soku-p | 無料・安全な画像変換ツール',
+    description: 'WebAssemblyを使用した高速・安全なクライアントサイド画像変換ツール。JPG, PNG, WebP, HEICなどに対応。登録不要、完全無料。',
     jsonLd: ''
+  }
+
+  // We can customize title based on path if needed
+  if (c.req.path === '/privacy') {
+    seo.title = 'プライバシーポリシー | Soku-p';
   }
 
   return renderHtml(c, {}, seo)
