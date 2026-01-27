@@ -5,6 +5,10 @@ import wasm from 'vite-plugin-wasm'
 import topLevelAwait from 'vite-plugin-top-level-await'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 export default defineConfig(({ mode }) => {
   if (mode === 'client') {
@@ -44,9 +48,15 @@ export default defineConfig(({ mode }) => {
       wasm(),
       topLevelAwait(),
     ],
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'react/jsx-dev-runtime', 'react/jsx-runtime', 'react-dom/server'],
+    },
     ssr: {
       target: 'webworker',
       noExternal: true,
+      optimizeDeps: {
+        include: ['react', 'react-dom', 'react/jsx-dev-runtime', 'react/jsx-runtime', 'react-dom/server'],
+      },
     },
     build: {
       ssr: true,
