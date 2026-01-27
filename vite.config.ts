@@ -32,9 +32,11 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
+        'react-dom/server': path.resolve(__dirname, 'node_modules/react-dom/server.browser.js'),
       },
     },
     plugins: [
+      react(),
       devServer({
         entry: 'src/index.tsx',
         adapter: cloudflareAdapter,
@@ -49,6 +51,7 @@ export default defineConfig(({ mode }) => {
     build: {
       ssr: true,
       target: 'esnext',
+      emptyOutDir: false,
       rollupOptions: {
         input: 'src/index.tsx',
         output: {
