@@ -19,6 +19,9 @@ export default defineConfig(({ mode }) => {
         },
       },
       plugins: [react(), wasm(), topLevelAwait()],
+      optimizeDeps: {
+        exclude: ['@silvia-odwyer/photon'],
+      },
       build: {
         rollupOptions: {
           input: './src/client.tsx',
@@ -50,6 +53,7 @@ export default defineConfig(({ mode }) => {
     ],
     optimizeDeps: {
       include: ['react', 'react-dom', 'react/jsx-dev-runtime', 'react/jsx-runtime', 'react-dom/server'],
+      exclude: ['@silvia-odwyer/photon'],
     },
     ssr: {
       target: 'webworker',
