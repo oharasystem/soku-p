@@ -25,11 +25,11 @@ export default function Layout({ children }: LayoutProps) {
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 mt-auto">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row items-center justify-between text-sm text-gray-500">
-          <p>© 2026 Soku-p / Oohara System.</p>
+          <p>© 2026 Soku-p / solooo.dev</p>
           <div className="mt-4 md:mt-0 space-x-4">
-             <Link to="/privacy" className="hover:text-gray-900 transition-colors">
-               プライバシーポリシー
-             </Link>
+            <Link to="/privacy" className="hover:text-gray-900 transition-colors">
+              プライバシーポリシー
+            </Link>
           </div>
         </div>
       </footer>

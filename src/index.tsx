@@ -33,6 +33,7 @@ async function renderHtml(c: any, initialData: { source?: string, target?: strin
           </>
         ) : (
           <>
+            <link rel="stylesheet" href="/src/index.css" />
             <script type="module" dangerouslySetInnerHTML={{
               __html: `
               import RefreshRuntime from "/@react-refresh"
