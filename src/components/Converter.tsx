@@ -1,18 +1,38 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { convertImage, type OutputFormat } from '@/lib/converter';
 import { cn } from '@/lib/utils';
+import { SUPPORTED_INPUTS, SUPPORTED_OUTPUTS, MIME_TYPES } from '@/lib/constants';
 
-export default function Converter() {
+interface ConverterProps {
+  initialSource?: string;
+  initialTarget?: string;
+}
+
+export default function Converter({ initialSource, initialTarget }: ConverterProps) {
+  // Normalize initial props to lower case if present
+  const defaultSource = initialSource ? initialSource.toLowerCase() : 'heic';
+  const defaultTarget = initialTarget ? initialTarget.toLowerCase() : 'jpg';
+
+  // Ensure defaults are valid, otherwise fallback
+  const validSource = SUPPORTED_INPUTS.includes(defaultSource) ? defaultSource : 'heic';
+  // Cast defaultTarget to OutputFormat if valid, else 'png'
+  const validTarget = (SUPPORTED_OUTPUTS.includes(defaultTarget) ? defaultTarget : 'png') as OutputFormat;
+
+  const [sourceFormat, setSourceFormat] = useState<string>(validSource);
+  const [targetFormat, setTargetFormat] = useState<OutputFormat>(validTarget);
+
   const [file, setFile] = useState<File | null>(null);
-  const [format, setFormat] = useState<OutputFormat>('png');
   const [isConverting, setIsConverting] = useState(false);
   const [convertedUrl, setConvertedUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Derive accept attribute from sourceFormat
+  const acceptAttribute = MIME_TYPES[sourceFormat] || 'image/*';
 
   // Drag and Drop Handlers
   const onDragOver = useCallback((e: React.DragEvent) => {
@@ -31,14 +51,63 @@ export default function Converter() {
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const droppedFile = e.dataTransfer.files[0];
-      // Basic validation: check if it is an image
-      if (!droppedFile.type.startsWith('image/') && !droppedFile.name.toLowerCase().endsWith('.heic')) {
-        setError('Please upload a valid image file.');
-        return;
+
+      // Smart Drop Logic: Detect format from extension
+      const nameParts = droppedFile.name.split('.');
+      const ext = nameParts.length > 1 ? nameParts.pop()?.toLowerCase() : '';
+
+      let detectedFormat = '';
+      if (ext && SUPPORTED_INPUTS.includes(ext)) {
+        detectedFormat = ext;
+      } else if (ext === 'jpeg' && SUPPORTED_INPUTS.includes('jpg')) {
+         detectedFormat = 'jpg'; // normalize jpeg to jpg if preferred, or keep as is
       }
-      setFile(droppedFile);
-      setError(null);
-      setConvertedUrl(null);
+
+      // Check against supported inputs
+      if (detectedFormat && SUPPORTED_INPUTS.includes(detectedFormat)) {
+        setSourceFormat(detectedFormat);
+        setFile(droppedFile);
+        setError(null);
+        setConvertedUrl(null);
+      } else {
+        // Fallback: Check if it's generally an image or matches current selection
+        // If strict validation is required per step instructions:
+        // "update the 'From' state to match the dropped file"
+
+        // If we couldn't detect a supported format, check if generic image
+        if (!droppedFile.type.startsWith('image/') && !droppedFile.name.toLowerCase().endsWith('.heic')) {
+          setError('Please upload a valid image file.');
+          return;
+        }
+
+        // If it is a valid image but we didn't match extension exactly (e.g. rare case),
+        // strictly speaking we should probably set error if it's not in SUPPORTED_INPUTS.
+        // But let's try to be helpful.
+        if (droppedFile.type === 'image/jpeg') setSourceFormat('jpg');
+        else if (droppedFile.type === 'image/png') setSourceFormat('png');
+        else if (droppedFile.type === 'image/webp') setSourceFormat('webp');
+        // If still unknown but looks like image, just set file and warn or leave source as is?
+        // Current requirement: "automatically update the 'From' state"
+        // If not supported input, we should probably error.
+
+        if (!detectedFormat) {
+             // Try to map mime type back to extension
+             const mimeEntry = Object.entries(MIME_TYPES).find(([_, mime]) => mime === droppedFile.type);
+             if (mimeEntry && SUPPORTED_INPUTS.includes(mimeEntry[0])) {
+                 setSourceFormat(mimeEntry[0]);
+                 setFile(droppedFile);
+                 setError(null);
+                 setConvertedUrl(null);
+             } else if (droppedFile.name.toLowerCase().endsWith('.heic')) {
+                 setSourceFormat('heic');
+                 setFile(droppedFile);
+                 setError(null);
+                 setConvertedUrl(null);
+             } else {
+                 setError('File format not supported for conversion.');
+             }
+        }
+      }
     }
   }, []);
 
@@ -57,11 +126,10 @@ export default function Converter() {
     setError(null);
 
     try {
-      // Small timeout to allow UI to update (spinner to appear) before heavy WASM work blocks main thread
-      // effectively letting React render the loading state.
+      // Small timeout to allow UI to update
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      const url = await convertImage(file, format);
+      const url = await convertImage(file, targetFormat);
       setConvertedUrl(url);
     } catch (err: any) {
       console.error(err);
@@ -75,10 +143,9 @@ export default function Converter() {
     if (!convertedUrl) return;
     const link = document.createElement('a');
     link.href = convertedUrl;
-    // Keep original name but change extension
     const originalName = file?.name || 'image';
     const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
-    link.download = `${nameWithoutExt}.${format}`;
+    link.download = `${nameWithoutExt}.${targetFormat}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -98,6 +165,43 @@ export default function Converter() {
         </CardHeader>
         <CardContent className="space-y-4">
 
+          {/* Configuration Grid */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="source-format" className="text-sm font-medium text-gray-700">Convert from:</label>
+              <Select
+                id="source-format"
+                value={sourceFormat}
+                onChange={(e) => {
+                    setSourceFormat(e.target.value);
+                    // Reset file if it doesn't match new format?
+                    // Usually better to let user keep file but maybe warn.
+                    // For now, let's reset to avoid confusion if types mismatch strictly
+                    if (file) setFile(null);
+                }}
+                disabled={isConverting}
+              >
+                {SUPPORTED_INPUTS.map((fmt) => (
+                    <option key={fmt} value={fmt}>{fmt.toUpperCase()}</option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="target-format" className="text-sm font-medium text-gray-700">Convert to:</label>
+              <Select
+                id="target-format"
+                value={targetFormat}
+                onChange={(e) => setTargetFormat(e.target.value as OutputFormat)}
+                disabled={isConverting}
+              >
+                {SUPPORTED_OUTPUTS.map((fmt) => (
+                    <option key={fmt} value={fmt}>{fmt.toUpperCase()}</option>
+                ))}
+              </Select>
+            </div>
+          </div>
+
           {/* Drop Zone */}
           {!file ? (
             <div
@@ -114,15 +218,15 @@ export default function Converter() {
                 id="file-upload"
                 type="file"
                 className="hidden"
-                accept="image/*,.heic"
+                accept={acceptAttribute}
                 onChange={onFileSelect}
               />
               <div className="flex flex-col items-center justify-center space-y-2 text-gray-500">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>
-                <p className="text-sm font-medium">Drag & drop an image here, or click to select</p>
-                <p className="text-xs text-gray-400">Supports PNG, JPG, WEBP, HEIC</p>
+                <p className="text-sm font-medium">Drag & drop {sourceFormat.toUpperCase()} here</p>
+                <p className="text-xs text-gray-400">or click to select</p>
               </div>
             </div>
           ) : (
@@ -145,20 +249,6 @@ export default function Converter() {
               </button>
             </div>
           )}
-
-          {/* Configuration */}
-          <div className="grid gap-2">
-            <label className="text-sm font-medium text-gray-700">Convert to:</label>
-            <Select
-              value={format}
-              onChange={(e) => setFormat(e.target.value as OutputFormat)}
-              disabled={isConverting}
-            >
-              <option value="png">PNG</option>
-              <option value="jpeg">JPEG</option>
-              <option value="webp">WEBP</option>
-            </Select>
-          </div>
 
           {error && (
             <div className="p-3 bg-red-50 text-red-600 text-sm rounded-md border border-red-100">

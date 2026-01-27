@@ -1,7 +1,12 @@
 import React from 'react'
 import Converter from './components/Converter'
 
-export default function App() {
+interface AppProps {
+  initialSource?: string;
+  initialTarget?: string;
+}
+
+export default function App({ initialSource, initialTarget }: AppProps) {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 font-sans">
       <div className="mb-8 text-center">
@@ -9,7 +14,7 @@ export default function App() {
         <p className="text-gray-600">Client-side image conversion powered by WebAssembly</p>
       </div>
 
-      <Converter />
+      <Converter initialSource={initialSource} initialTarget={initialTarget} />
 
       <footer className="mt-12 text-center text-sm text-gray-400">
         <p>Built with Vite, React, Hono & WASM</p>
