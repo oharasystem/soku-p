@@ -70,7 +70,11 @@ export default defineConfig(({ mode }) => {
         input: 'src/index.tsx',
         output: {
           entryFileNames: '_worker.js',
-        }
+        },
+        external: [
+          '@silvia-odwyer/photon',
+          'heic2any',
+        ],
       },
     },
   }

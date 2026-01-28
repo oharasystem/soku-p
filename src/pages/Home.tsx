@@ -1,5 +1,7 @@
-import React from 'react';
-import Converter from '../components/Converter';
+import { useState, useEffect, lazy, Suspense } from 'react';
+
+// Client-side only Converter
+const Converter = lazy(() => import('../components/Converter'));
 
 interface HomeProps {
   initialSource?: string;
@@ -7,6 +9,12 @@ interface HomeProps {
 }
 
 export default function Home({ initialSource, initialTarget }: HomeProps) {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   return (
     <div className="w-full flex flex-col items-center">
       <div className="mb-8 text-center space-y-2">
@@ -18,7 +26,21 @@ export default function Home({ initialSource, initialTarget }: HomeProps) {
         </p>
       </div>
 
-      <Converter initialSource={initialSource} initialTarget={initialTarget} />
+      {isClient ? (
+        <Suspense fallback={
+          <div className="w-full max-w-lg mx-auto p-4">
+            <div className="animate-pulse bg-gray-200 rounded-lg h-64"></div>
+          </div>
+        }>
+          <Converter initialSource={initialSource} initialTarget={initialTarget} />
+        </Suspense>
+      ) : (
+        <div className="w-full max-w-lg mx-auto p-4">
+          <div className="bg-gray-100 rounded-lg h-64 flex items-center justify-center">
+            <p className="text-gray-500">読み込み中...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
