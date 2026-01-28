@@ -1,5 +1,4 @@
 import { Hono } from 'hono'
-import { serveStatic } from 'hono/cloudflare-workers'
 import { renderToReadableStream } from 'react-dom/server'
 import { StaticRouter } from 'react-router-dom/server'
 import App from './App'
@@ -9,8 +8,6 @@ import { generateMetadata, SEOData } from './lib/seo'
 const app = new Hono()
 
 const BASE_URL = 'https://soku-p.solooo.dev'
-
-app.use('/static/*', serveStatic({ root: './' }))
 
 // Sitemap.xml for SEO
 app.get('/sitemap.xml', (c) => {

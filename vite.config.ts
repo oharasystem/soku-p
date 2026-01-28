@@ -13,6 +13,7 @@ const __dirname = path.dirname(__filename)
 export default defineConfig(({ mode }) => {
   if (mode === 'client') {
     return {
+      publicDir: 'public',
       resolve: {
         alias: {
           '@': path.resolve(__dirname, './src'),
