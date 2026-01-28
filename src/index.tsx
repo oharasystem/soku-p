@@ -3,12 +3,70 @@ import { serveStatic } from 'hono/cloudflare-workers'
 import { renderToReadableStream } from 'react-dom/server'
 import { StaticRouter } from 'react-router-dom/server'
 import App from './App'
-import { isValidFormat } from './lib/constants'
+import { SUPPORTED_INPUTS, SUPPORTED_OUTPUTS, isValidFormat } from './lib/constants'
 import { generateMetadata, SEOData } from './lib/seo'
 
 const app = new Hono()
 
+const BASE_URL = 'https://soku-p.solooo.dev'
+
 app.use('/static/*', serveStatic({ root: './' }))
+
+// Sitemap.xml for SEO
+app.get('/sitemap.xml', (c) => {
+  const urls: { loc: string; priority: string; changefreq: string }[] = []
+
+  // Top page
+  urls.push({ loc: '/', priority: '1.0', changefreq: 'weekly' })
+
+  // Privacy page
+  urls.push({ loc: '/privacy', priority: '0.3', changefreq: 'monthly' })
+
+  // All valid conversion pages
+  for (const source of SUPPORTED_INPUTS) {
+    for (const target of SUPPORTED_OUTPUTS) {
+      if (isValidFormat(source, target)) {
+        urls.push({
+          loc: `/convert/${source}-to-${target}`,
+          priority: '0.8',
+          changefreq: 'monthly'
+        })
+      }
+    }
+  }
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map(u => `  <url>
+    <loc>${BASE_URL}${u.loc}</loc>
+    <changefreq>${u.changefreq}</changefreq>
+    <priority>${u.priority}</priority>
+  </url>`).join('\n')}
+</urlset>`
+
+  return c.text(xml, 200, {
+    'Content-Type': 'application/xml'
+  })
+})
+
+// robots.txt for SEO
+app.get('/robots.txt', (c) => {
+  return c.text(`User-agent: *
+Allow: /
+
+Sitemap: ${BASE_URL}/sitemap.xml
+`, 200, {
+    'Content-Type': 'text/plain'
+  })
+})
+
+// ads.txt for AdSense
+app.get('/ads.txt', (c) => {
+  return c.text(`google.com, pub-3860710971355910, DIRECT, f08c47fec0942fa0
+`, 200, {
+    'Content-Type': 'text/plain'
+  })
+})
 
 // Helper to render the HTML
 async function renderHtml(c: any, initialData: { source?: string, target?: string }, seo: SEOData) {
@@ -17,8 +75,15 @@ async function renderHtml(c: any, initialData: { source?: string, target?: strin
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" type="image/png" href="/favicon.png" />
         <title>{seo.title}</title>
         <meta name="description" content={seo.description} />
+        <meta property="og:image" content="/ogp.png" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={seo.title} />
+        <meta property="og:description" content={seo.description} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:image" content="/ogp.png" />
         {seo.jsonLd && (
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: seo.jsonLd }} />
         )}
