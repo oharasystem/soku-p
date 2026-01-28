@@ -75,12 +75,13 @@ async function renderHtml(c: any, initialData: { source?: string, target?: strin
         <link rel="icon" type="image/png" href="/favicon.png" />
         <title>{seo.title}</title>
         <meta name="description" content={seo.description} />
-        <meta property="og:image" content="/ogp.png" />
+        <meta property="og:url" content={`${BASE_URL}${c.req.path}`} />
+        <meta property="og:image" content={`${BASE_URL}/ogp.png`} />
         <meta property="og:type" content="website" />
         <meta property="og:title" content={seo.title} />
         <meta property="og:description" content={seo.description} />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:image" content="/ogp.png" />
+        <meta name="twitter:image" content={`${BASE_URL}/ogp.png`} />
         {seo.jsonLd && (
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: seo.jsonLd }} />
         )}
