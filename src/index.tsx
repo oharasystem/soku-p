@@ -93,7 +93,7 @@ async function renderHtml(c: any, initialData: { source?: string, target?: strin
 
         {import.meta.env.PROD ? (
           <>
-            <link rel="stylesheet" href="/static/index.css" />
+            <link rel="stylesheet" href="/static/client.css" />
             <script type="module" src="/static/client.js"></script>
           </>
         ) : (
