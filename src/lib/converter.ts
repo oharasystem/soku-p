@@ -2,6 +2,11 @@ import init, { PhotonImage } from '@silvia-odwyer/photon';
 
 export type OutputFormat = 'png' | 'jpeg' | 'webp';
 
+export interface ConversionResult {
+  url: string;
+  size: number;
+}
+
 // Singleton promise to ensure init() is called exactly once
 let wasmInit: Promise<any> | null = null;
 
@@ -15,12 +20,48 @@ async function ensureWasmLoaded() {
   await wasmInit;
 }
 
+// Helper to convert Blob to WebP using Canvas for quality control
+function convertBlobToWebP(blob: Blob, quality: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'));
+        return;
+      }
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob(
+        (resultBlob) => {
+          if (resultBlob) {
+            resolve(resultBlob);
+          } else {
+            reject(new Error('Canvas conversion to WebP failed'));
+          }
+        },
+        'image/webp',
+        quality / 100 // Convert 0-100 scale to 0.0-1.0 scale
+      );
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = (err) => {
+      URL.revokeObjectURL(img.src);
+      reject(new Error('Failed to load image for WebP conversion'));
+    };
+    img.src = URL.createObjectURL(blob);
+  });
+}
+
 export async function convertImage(
   file: File,
   format: OutputFormat,
-  quality: number = 90
-): Promise<string> {
+  quality: number = 80
+): Promise<ConversionResult> {
   // 1. Ensure WASM is loaded before doing anything
+  // Even if using Canvas for WebP, we ensure consistent initialization
   await ensureWasmLoaded();
 
   let inputBlob: Blob = file;
@@ -42,6 +83,20 @@ export async function convertImage(
     } catch (err) {
       console.error('HEIC conversion failed:', err);
       throw new Error('Failed to process HEIC image.');
+    }
+  }
+
+  // Special handling for WebP to support quality control via Canvas
+  if (format === 'webp') {
+    try {
+      const webpBlob = await convertBlobToWebP(inputBlob, quality);
+      return {
+        url: URL.createObjectURL(webpBlob),
+        size: webpBlob.size,
+      };
+    } catch (err) {
+      console.error('WebP conversion failed:', err);
+      throw new Error('Failed to convert image to WebP.');
     }
   }
 
@@ -73,6 +128,7 @@ export async function convertImage(
         outputBytes = image.get_bytes_jpeg(quality);
         mimeType = 'image/jpeg';
         break;
+      // WebP is handled above, but keeping case for completeness if we ever remove the block above
       case 'webp':
         outputBytes = image.get_bytes_webp();
         mimeType = 'image/webp';
@@ -93,5 +149,8 @@ export async function convertImage(
 
   // 7. Return Blob URL
   const blob = new Blob([outputBytes], { type: mimeType });
-  return URL.createObjectURL(blob);
+  return {
+    url: URL.createObjectURL(blob),
+    size: blob.size,
+  };
 }
