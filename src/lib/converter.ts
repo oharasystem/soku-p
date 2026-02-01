@@ -2,6 +2,11 @@ import init, { PhotonImage } from '@silvia-odwyer/photon';
 
 export type OutputFormat = 'png' | 'jpeg' | 'webp';
 
+export interface ConversionResult {
+  url: string;
+  size: number;
+}
+
 // Singleton promise to ensure init() is called exactly once
 let wasmInit: Promise<any> | null = null;
 
@@ -54,7 +59,7 @@ export async function convertImage(
   file: File,
   format: OutputFormat,
   quality: number = 80
-): Promise<string> {
+): Promise<ConversionResult> {
   // 1. Ensure WASM is loaded before doing anything
   // Even if using Canvas for WebP, we ensure consistent initialization
   await ensureWasmLoaded();
@@ -85,7 +90,10 @@ export async function convertImage(
   if (format === 'webp') {
     try {
       const webpBlob = await convertBlobToWebP(inputBlob, quality);
-      return URL.createObjectURL(webpBlob);
+      return {
+        url: URL.createObjectURL(webpBlob),
+        size: webpBlob.size,
+      };
     } catch (err) {
       console.error('WebP conversion failed:', err);
       throw new Error('Failed to convert image to WebP.');
@@ -141,5 +149,8 @@ export async function convertImage(
 
   // 7. Return Blob URL
   const blob = new Blob([outputBytes], { type: mimeType });
-  return URL.createObjectURL(blob);
+  return {
+    url: URL.createObjectURL(blob),
+    size: blob.size,
+  };
 }

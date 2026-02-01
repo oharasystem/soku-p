@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { convertImage, type OutputFormat } from '@/lib/converter';
-import { cn } from '@/lib/utils';
+import { cn, formatFileSize } from '@/lib/utils';
 import { ShieldCheck } from 'lucide-react';
 
 interface ConverterProps {
@@ -24,6 +24,7 @@ export default function Converter({ initialSource, initialTarget }: ConverterPro
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState(false);
   const [convertedUrl, setConvertedUrl] = useState<string | null>(null);
+  const [convertedSize, setConvertedSize] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -42,6 +43,7 @@ export default function Converter({ initialSource, initialTarget }: ConverterPro
     setPreviewUrl(url);
     setFile(selectedFile);
     setConvertedUrl(null);
+    setConvertedSize(null);
     setError(null);
   };
 
@@ -66,8 +68,9 @@ export default function Converter({ initialSource, initialTarget }: ConverterPro
     try {
       // Small timeout to allow UI render
       await new Promise(resolve => setTimeout(resolve, 100));
-      const url = await convertImage(file, targetFormat);
+      const { url, size } = await convertImage(file, targetFormat);
       setConvertedUrl(url);
+      setConvertedSize(size);
     } catch (err: any) {
       console.error(err);
       setError('変換中にエラーが発生しました。別の形式や画像を試してください。');
@@ -79,6 +82,7 @@ export default function Converter({ initialSource, initialTarget }: ConverterPro
   const reset = () => {
     setFile(null);
     setConvertedUrl(null);
+    setConvertedSize(null);
     setError(null);
   };
 
@@ -157,7 +161,7 @@ export default function Converter({ initialSource, initialTarget }: ConverterPro
 
                    <div className="text-center">
                       <p className="font-medium text-gray-900 truncate max-w-xs">{file.name}</p>
-                      <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
+                      <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
                    </div>
 
                    <button
@@ -216,6 +220,23 @@ export default function Converter({ initialSource, initialTarget }: ConverterPro
             </Button>
           ) : (
             <div className="w-full space-y-3">
+              {/* Result Summary */}
+              <div className="bg-blue-50 border border-blue-100 rounded-md p-3 text-center mb-2">
+                <p className="text-sm text-blue-800">
+                  <span className="font-semibold">変換完了!</span>
+                  {convertedSize && (
+                    <span className="ml-2 block sm:inline mt-1 sm:mt-0">
+                      サイズ: <span className="font-bold">{formatFileSize(convertedSize)}</span>
+                      {file && convertedSize < file.size && (
+                         <span className="ml-2 text-green-600 text-xs bg-green-100 px-1.5 py-0.5 rounded-full">
+                           {(100 - (convertedSize / file.size) * 100).toFixed(0)}% 削減
+                         </span>
+                      )}
+                    </span>
+                  )}
+                </p>
+              </div>
+
               <Button
                 variant="default"
                 className="w-full py-6 text-lg font-bold bg-green-600 hover:bg-green-700 shadow-md"
